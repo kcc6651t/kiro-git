@@ -1,0 +1,561 @@
+@import './styles/tokens.css';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--fp-font);
+  font-size: var(--fp-fs);
+  color: var(--fp-text);
+  background: var(--fp-bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(22, 119, 255, 0.18);
+}
+
+/* ------------------------------------------------------------------ *
+ * 布局骨架
+ * ------------------------------------------------------------------ */
+.fp-layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* 页面级保险：任何内容都不允许把应用顶出视口宽度（与顶栏对齐） */
+  overflow-x: hidden;
+}
+
+.fp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--fp-header-h);
+  padding: 0 var(--fp-space-4);
+  background: linear-gradient(115deg, var(--fp-header-bg) 0%, #10203f 58%, var(--fp-header-bg-2) 100%);
+  color: var(--fp-header-text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 1px 4px rgba(2, 8, 23, 0.35);
+  position: relative;
+  z-index: 10;
+}
+
+.fp-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--fp-header-text);
+  letter-spacing: 0.3px;
+}
+
+.fp-brand__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--fp-radius);
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.38), rgba(22, 119, 255, 0.14));
+  border: 1px solid rgba(105, 177, 255, 0.45);
+  color: #91caff;
+  font-size: 17px;
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.25);
+}
+
+.fp-user {
+  color: rgba(230, 237, 245, 0.88);
+  font-size: var(--fp-fs-sm);
+}
+
+/* 深色顶栏中的幽灵按钮 */
+.fp-header .ant-btn-default {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(230, 237, 245, 0.92);
+  box-shadow: none;
+  transition: all var(--fp-ease);
+}
+.fp-header .ant-btn-default:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  color: #fff !important;
+}
+
+.fp-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  padding: var(--fp-space-2);
+  gap: var(--fp-space-2);
+  background: var(--fp-bg-app);
+}
+
+/* 宽度约束链：宽内容（如多列结果集）只允许在表格内部滚动，不得顶破页面。
+ * flex 子项默认 min-width:auto 会把内容固有宽度向上传递，必须逐层清零。 */
+.fp-view,
+.fp-panel {
+  min-width: 0;
+}
+
+/* 三栏 —— 每栏都是一个圆角面板 */
+.fp-col-left {
+  width: var(--fp-left-w);
+  flex: none;
+}
+
+.fp-col-center {
+  width: 40%;
+  min-width: 320px;
+  flex: none;
+}
+
+/* 右栏为纵向 flex：顶部是预览标签行（可空），下方 PreviewPane 填满剩余空间 */
+.fp-col-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ *
+ * 统一「面板」结构：.fp-panel > .fp-panel__header + .fp-panel__body
+ * ------------------------------------------------------------------ */
+.fp-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--fp-bg-panel);
+  border: 1px solid var(--fp-border);
+  border-radius: var(--fp-radius);
+  box-shadow: var(--fp-shadow-1);
+  overflow: hidden;
+}
+
+.fp-panel__header {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+  height: var(--fp-toolbar-h);
+  padding: 0 var(--fp-space-3);
+  border-bottom: 1px solid var(--fp-border);
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  font-weight: 600;
+  font-size: var(--fp-fs);
+  letter-spacing: 0.2px;
+  color: var(--fp-text);
+  flex: none;
+}
+
+.fp-panel__header > .anticon {
+  color: var(--fp-text-2);
+}
+
+.fp-panel__header .fp-panel__extra {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-2);
+}
+
+.fp-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.fp-panel__section {
+  padding: var(--fp-space-2) var(--fp-space-3);
+}
+
+.fp-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-1);
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-3);
+  padding: var(--fp-space-2) var(--fp-space-3) var(--fp-space-1);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  margin-top: var(--fp-space-1);
+}
+
+/* ------------------------------------------------------------------ *
+ * 工具条 / 面包屑
+ * ------------------------------------------------------------------ */
+.fp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+  flex-wrap: wrap;
+  min-height: var(--fp-toolbar-h);
+  padding: var(--fp-space-2) var(--fp-space-3);
+  border-bottom: 1px solid var(--fp-border);
+  background: var(--fp-bg-panel);
+  flex: none;
+}
+
+.fp-toolbar--subtle {
+  background: var(--fp-bg-subtle);
+}
+
+.fp-breadcrumb {
+  padding: var(--fp-space-2) var(--fp-space-3);
+  border-bottom: 1px solid var(--fp-border);
+  background: var(--fp-bg-panel);
+  flex: none;
+}
+
+.fp-meta-line {
+  padding: var(--fp-space-1) var(--fp-space-3);
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-2);
+  border-bottom: 1px solid var(--fp-border);
+  background: var(--fp-bg-subtle);
+  flex: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------ *
+ * 通用工具类
+ * ------------------------------------------------------------------ */
+.fp-mono {
+  font-family: var(--fp-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.fp-text-2 {
+  color: var(--fp-text-2);
+}
+
+.fp-text-3 {
+  color: var(--fp-text-3);
+}
+
+.fp-clickable {
+  cursor: pointer;
+}
+
+.fp-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 列表项：选中/悬停统一反馈 */
+.fp-row {
+  cursor: pointer;
+  border-radius: var(--fp-radius-sm);
+  transition: background-color var(--fp-ease);
+}
+.fp-row:hover {
+  background: var(--fp-bg-hover);
+}
+.fp-row--active {
+  background: var(--fp-bg-active);
+  box-shadow: inset 2px 0 0 var(--fp-primary);
+}
+
+/* 书签行操作图标：悬停显示 */
+.fp-bm-actions {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.fp-bm-row:hover .fp-bm-actions {
+  opacity: 1;
+}
+.fp-bm-actions .anticon {
+  transition: color var(--fp-ease);
+}
+.fp-bm-actions .anticon:hover {
+  color: var(--fp-primary);
+}
+
+/* ------------------------------------------------------------------ *
+ * 登录页
+ * ------------------------------------------------------------------ */
+.fp-login {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(1000px 520px at 12% -8%, rgba(22, 119, 255, 0.22), transparent 60%),
+    radial-gradient(900px 520px at 88% 108%, rgba(47, 84, 235, 0.16), transparent 60%),
+    var(--fp-header-bg);
+}
+
+/* 细网格纹理 */
+.fp-login::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+}
+
+.fp-login__card {
+  width: 380px;
+  position: relative;
+  border: none;
+  border-radius: var(--fp-radius-lg);
+  box-shadow: 0 24px 64px rgba(2, 8, 23, 0.45);
+}
+
+.fp-login__card .ant-card-body {
+  padding: 32px 32px 28px;
+}
+
+.fp-login__brand {
+  text-align: center;
+  margin-bottom: var(--fp-space-6);
+}
+
+.fp-login__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--fp-primary) 0%, #0958d9 100%);
+  color: #fff;
+  font-size: 24px;
+  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.38);
+  margin-bottom: var(--fp-space-3);
+}
+
+.fp-login__title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--fp-text);
+}
+
+.fp-login__card .ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.fp-login__card .ant-btn-primary {
+  letter-spacing: 2px;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------------ *
+ * 细滚动条
+ * ------------------------------------------------------------------ */
+.fp-panel__body,
+.fp-list,
+.fp-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.22) transparent;
+}
+.fp-panel__body::-webkit-scrollbar,
+.fp-list::-webkit-scrollbar,
+.fp-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.fp-panel__body::-webkit-scrollbar-thumb,
+.fp-list::-webkit-scrollbar-thumb,
+.fp-scroll::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+  border-radius: 6px;
+}
+.fp-panel__body::-webkit-scrollbar-thumb:hover,
+.fp-list::-webkit-scrollbar-thumb:hover,
+.fp-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.fp-list {
+  flex: 1;
+  overflow: auto;
+}
+
+/* SQL 工作台：多标签查询条 */
+.fp-sql-tabs {
+  display: flex;
+  gap: var(--fp-space-1);
+  padding: var(--fp-space-1) var(--fp-space-2) 0;
+  border-bottom: 1px solid var(--fp-border);
+  background: var(--fp-bg-subtle);
+  overflow-x: auto;
+}
+
+.fp-sql-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+  padding: var(--fp-space-1) var(--fp-space-3);
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-2);
+  background: var(--fp-bg-panel);
+  border: 1px solid var(--fp-border);
+  border-bottom: none;
+  border-radius: var(--fp-radius-sm) var(--fp-radius-sm) 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--fp-ease);
+}
+
+.fp-sql-tab--active {
+  color: var(--fp-primary);
+  font-weight: 600;
+  background: var(--fp-bg-panel);
+  box-shadow: inset 0 2px 0 var(--fp-primary);
+}
+
+.fp-sql-tab__close {
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-3);
+  transition: color var(--fp-ease);
+}
+
+.fp-sql-tab__close:hover {
+  color: var(--fp-primary);
+}
+
+/* 文件预览标签行（Notepad++ 风格，样式对齐 fp-sql-tabs） */
+.fp-tabs {
+  display: flex;
+  padding: var(--fp-space-1) var(--fp-space-2) 0;
+  border-bottom: 1px solid var(--fp-border);
+  background: var(--fp-bg-subtle);
+  flex: none;
+}
+
+/* 标签条带：独立横向滚动区，计量器不随滚动遮挡标签 */
+.fp-tabs__strip {
+  display: flex;
+  gap: var(--fp-space-1);
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: thin;
+}
+
+.fp-tabs__item {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+  padding: var(--fp-space-1) var(--fp-space-3);
+  max-width: 220px;
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-2);
+  background: var(--fp-bg-panel);
+  border: 1px solid var(--fp-border);
+  border-bottom: none;
+  border-radius: var(--fp-radius-sm) var(--fp-radius-sm) 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--fp-ease);
+  flex: none;
+}
+
+.fp-tabs__item--active {
+  color: var(--fp-primary);
+  font-weight: 600;
+  box-shadow: inset 0 2px 0 var(--fp-primary);
+}
+
+.fp-tabs__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fp-tabs__close {
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-3);
+  transition: color var(--fp-ease);
+}
+
+.fp-tabs__close:hover {
+  color: var(--fp-primary);
+}
+
+/* 缓存占用计量：固定在标签行右端（滚动区之外），左边界分隔线 */
+.fp-tabs__meter {
+  align-self: center;
+  flex: none;
+  padding: 0 var(--fp-space-2);
+  margin-left: var(--fp-space-1);
+  font-size: var(--fp-fs-sm);
+  color: var(--fp-text-3);
+  border-left: 1px solid var(--fp-border);
+  white-space: nowrap;
+}
+
+.fp-tabs__alert {
+  flex: none;
+  border-radius: 0;
+}
+
+/* 顶级导航（文件预览 / SQL 工作台） */
+.fp-header__left {
+  display: flex;
+  align-items: center;
+}
+
+.fp-nav {
+  display: flex;
+  gap: var(--fp-space-1);
+  margin-left: var(--fp-space-6);
+}
+
+.fp-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+  padding: var(--fp-space-1) var(--fp-space-3);
+  font-size: var(--fp-fs);
+  color: rgba(255, 255, 255, 0.75);
+  border-radius: var(--fp-radius-sm);
+  cursor: pointer;
+  transition: all var(--fp-ease);
+}
+
+.fp-nav__item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fp-nav__item--active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* ------------------------------------------------------------------ *
+ * 文件内搜索命中高亮
+ * ------------------------------------------------------------------ */
+
+/* 匹配列表中的命中子串 */
+.fp-hit {
+  background: #ffe58f;
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
+/* Monaco 中跳转目标行的整行高亮 */
+.fp-editor-hit-line {
+  background: rgba(250, 173, 20, 0.28);
+}

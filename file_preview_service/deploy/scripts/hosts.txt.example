@@ -1,0 +1,4 @@
+# rollout-sync.sh 主机清单示例
+# 格式: <ip> <server_id> <role:primary|standby> <allowed_roots 逗号分隔>
+10.10.1.11 prod-app-01 primary /opt/apps,/data/logs
+10.10.1.12 prod-app-02 standby /opt/apps,/data/logs

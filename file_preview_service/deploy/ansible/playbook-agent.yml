@@ -1,0 +1,128 @@
+---
+# 批量部署/更新 Agent，并按 host_vars 开启 sync。
+#
+# 全量部署（二进制 + 证书 + 配置 + systemd）：
+#   ansible-playbook -i inventory.ini playbook-agent.yml
+# 仅下发并开启 sync 配置后重启（不重装二进制/证书）：
+#   ansible-playbook -i inventory.ini playbook-agent.yml --tags sync
+# 只对备机执行：
+#   ansible-playbook -i inventory.ini playbook-agent.yml --tags sync --limit prod-app-02
+- name: Deploy file-preview Agent and enable sync
+  hosts: file_preview_agents
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Ensure group
+      ansible.builtin.group:
+        name: "{{ agent_user }}"
+        system: true
+      tags: [always]
+
+    - name: Ensure service user
+      ansible.builtin.user:
+        name: "{{ agent_user }}"
+        group: "{{ agent_user }}"
+        system: true
+        shell: /sbin/nologin
+        create_home: false
+      tags: [always]
+
+    - name: Create directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ agent_user }}"
+        group: "{{ agent_user }}"
+        mode: "0750"
+      loop:
+        - "{{ agent_home }}"
+        - "{{ agent_home }}/config/certs"
+        - "{{ agent_home }}/logs"
+        - "{{ agent_home }}/run"
+      tags: [always]
+
+    - name: Copy agent binary
+      ansible.builtin.copy:
+        src: "{{ agent_binary_src }}"
+        dest: "{{ agent_home }}/file-preview-agent"
+        owner: "{{ agent_user }}"
+        group: "{{ agent_user }}"
+        mode: "0755"
+      when: deploy_binary | default(true) | bool
+      notify: restart agent
+      tags: [binary]
+
+    - name: Copy server certificate
+      ansible.builtin.copy:
+        src: "{{ certs_src_dir }}/{{ server_id }}-agent.crt"
+        dest: "{{ agent_home }}/config/certs/agent-server.crt"
+        owner: "{{ agent_user }}"
+        group: "{{ agent_user }}"
+        mode: "0644"
+      notify: restart agent
+      tags: [certs]
+
+    - name: Copy server private key
+      ansible.builtin.copy:
+        src: "{{ certs_src_dir }}/{{ server_id }}-agent.key"
+        dest: "{{ agent_home }}/config/certs/agent-server.key"
+        owner: "{{ agent_user }}"
+        group: "{{ agent_user }}"
+        mode: "0600"
+      notify: restart agent
+      tags: [certs]
+
+    - name: Copy central CA
+      ansible.builtin.copy:
+        src: "{{ certs_src_dir }}/main-ca.crt"
+        dest: "{{ agent_home }}/config/certs/main-ca.crt"
+        owner: "{{ agent_user }}"
+        group: "{{ agent_user }}"
+        mode: "0644"
+      notify: restart agent
+      tags: [certs]
+
+    - name: Render agent.yml (enables sync per host_vars)
+      ansible.builtin.template:
+        src: templates/agent.yml.j2
+        dest: "{{ agent_home }}/config/agent.yml"
+        owner: "{{ agent_user }}"
+        group: "{{ agent_user }}"
+        mode: "0640"
+      notify: restart agent
+      tags: [sync, config]
+
+    - name: Install systemd unit
+      ansible.builtin.template:
+        src: templates/file-preview-agent.service.j2
+        dest: /etc/systemd/system/file-preview-agent.service
+        mode: "0644"
+      notify:
+        - reload systemd
+        - restart agent
+      tags: [service]
+
+    - name: Enable and start agent
+      ansible.builtin.systemd:
+        name: file-preview-agent
+        enabled: true
+        state: started
+        daemon_reload: true
+      tags: [service]
+
+    - name: Wait for agent port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ agent_port }}"
+        timeout: 15
+      tags: [verify]
+
+  handlers:
+    - name: reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: restart agent
+      ansible.builtin.systemd:
+        name: file-preview-agent
+        state: restarted

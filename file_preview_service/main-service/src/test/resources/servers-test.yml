@@ -1,0 +1,62 @@
+servers:
+  - id: srv-a
+    name: Server A
+    env: test
+    enabled: true
+    tags: [test]
+    agent:
+      baseUrl: https://127.0.0.1:19443
+      serverName: srv-a-agent
+      caCertRef: agent-ca
+      clientCertRef: main-client
+    defaultRoot: /data/logs
+    allowedRoots:
+      - /data/logs
+      - /opt/apps
+    deniedPaths:
+      - /data/logs/secret.key
+    backup:
+      targetServerId: srv-b
+      enabled: true
+      schedule: ""
+      rules:
+        - name: logs
+          sourceDir: /data/logs
+          targetDir: /data/logs
+          includes: ["*.log"]
+          excludeDirs: ["archive"]
+          recursive: true
+          preservePermissions: true
+  - id: srv-b
+    name: Server B (standby)
+    env: test
+    enabled: true
+    tags: [test, standby]
+    agent:
+      baseUrl: https://127.0.0.1:19444
+      serverName: srv-b-agent
+      caCertRef: agent-ca
+      clientCertRef: main-client
+    defaultRoot: /data/logs
+    allowedRoots:
+      - /data/logs
+  - id: srv-bad
+    name: Server Bad Rule
+    env: test
+    enabled: true
+    allowedRoots:
+      - /data/logs
+    backup:
+      targetServerId: srv-b
+      enabled: true
+      rules:
+        - name: illegal
+          sourceDir: /etc
+          includes: ["*"]
+          recursive: false
+  - id: srv-disabled
+    name: Disabled Server
+    env: test
+    enabled: false
+    allowedRoots:
+      - /tmp

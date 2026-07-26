@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.18</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.company</groupId>
+    <artifactId>linux-file-preview</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>linux-file-preview</name>
+    <description>Central web service for read-only Linux file preview</description>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <okhttp.version>3.12.13</okhttp.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- H2 file-mode database (application metadata store) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- MySQL driver for the SQL workbench feature (pinned to 5.1.47 per requirement) -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.47</version>
+        </dependency>
+
+        <!-- YAML config parsing for servers.yml -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
+
+        <!-- OkHttp 3.12.x: last line supporting Java 7/8, supports mTLS -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- OkHttp MockWebServer for mTLS/agent-client integration tests -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>${okhttp.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- HeldCertificate / HandshakeCertificates helpers for mTLS tests -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-tls</artifactId>
+            <version>${okhttp.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>linux-file-preview</finalName>
+        <plugins>
+            <!-- Build the frontend and copy artifacts into static resources -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.15.0</version>
+                <configuration>
+                    <workingDirectory>${project.basedir}/../frontend</workingDirectory>
+                    <installDirectory>${project.build.directory}</installDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>v20.11.1</nodeVersion>
+                            <!-- 国内镜像，避免 node 官方源下载缓慢/失败；可按需替换 -->
+                            <nodeDownloadRoot>https://npmmirror.com/mirrors/node/</nodeDownloadRoot>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-install</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install --registry=https://registry.npmmirror.com</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 防御打包竞态：Windows 上 frontend-maven-plugin 的 npm 进程链会在 vite
+                 写完产物之前就退出（已轮询证实 index.html/monaco 在 default-resources
+                 开始后才落盘），default-resources 可能复制到缺失/0 字节的静态文件；
+                 且 resources 插件仅在源文件更新时覆盖（目标时间戳被设为源时间戳），
+                 坏的首次复制可能一直带进 jar（曾产出 0 字节 JS 的"白屏 jar"）。
+                 两处重拷：prepare-package 一次（护 spring-boot:run 场景），package 阶段、
+                 repackage 之前再来一次。注意本插件必须声明在 spring-boot 插件之前，
+                 package 阶段才按此序执行。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>re-copy-static-before-package</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources/static</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>re-copy-static-final</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources/static</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <!-- 兜底校验：repackage 之后把 jar 内 static 整树解出，与 src/main/resources/static
+                 做逐文件内容比对（different 选择器按内容+大小比较），不一致即构建失败。
+                 只校验不修改——事后用 ant/zip 全量重写 jar 会破坏 Spring Boot 嵌套 jar 的
+                 STORED 布局（nested jar files must be stored without compression）导致无法启动。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>verify-frontend-assets</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- repackage 后先用源码目录（vite 已写完的完整产物）就地覆盖
+                                     jar 内 static 条目，消除 vite/maven 复制竞态的影响；
+                                     不触碰其它条目，嵌套依赖保持 STORED -->
+                                <exec executable="powershell" failonerror="true">
+                                    <arg value="-NoProfile"/>
+                                    <arg value="-ExecutionPolicy"/>
+                                    <arg value="-Bypass"/>
+                                    <arg value="-File"/>
+                                    <arg value="${project.basedir}/build/overlay-static.ps1"/>
+                                    <arg value="${project.build.directory}/${project.build.finalName}.jar"/>
+                                    <arg value="src/main/resources/static"/>
+                                </exec>
+                                <!-- 再把 jar 内 static 整树解出，与源码目录逐文件内容比对 -->
+                                <delete dir="${project.build.directory}/frontend-verify"/>
+                                <unzip src="${project.build.directory}/${project.build.finalName}.jar"
+                                       dest="${project.build.directory}/frontend-verify">
+                                    <patternset>
+                                        <include name="BOOT-INF/classes/static/**"/>
+                                    </patternset>
+                                </unzip>
+                                <condition property="frontend.assets.mismatch">
+                                    <not><resourcecount count="0">
+                                        <fileset dir="src/main/resources/static">
+                                            <different targetdir="${project.build.directory}/frontend-verify/BOOT-INF/classes/static"
+                                                       ignoreFileTimes="true"/>
+                                        </fileset>
+                                    </resourcecount></not>
+                                </condition>
+                                <fail if="frontend.assets.mismatch"
+                                      message="jar 内前端静态资源与源码目录内容不一致（vite/maven 复制竞态未消除或产物不完整）。请重新执行 mvn clean package。"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Activate with -Pskip-frontend to build the jar without rebuilding the UI -->
+        <profile>
+            <id>skip-frontend</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

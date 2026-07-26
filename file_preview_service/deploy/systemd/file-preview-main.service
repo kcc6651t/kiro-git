@@ -1,0 +1,21 @@
+[Unit]
+Description=File Preview Central Service
+After=network.target
+
+[Service]
+Type=simple
+User=filepreview
+Group=filepreview
+WorkingDirectory=/opt/file-preview-main
+# 内存策略：堆上限 + 元空间 + 容器感知；按机器规格调整。大结果集查询采用流式+行数上限控制。
+Environment=JAVA_OPTS=-Xms256m -Xmx768m -XX:MaxMetaspaceSize=256m -XX:+ExitOnOutOfMemoryError
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/file-preview-main/linux-file-preview.jar \
+  --spring.config.location=file:/opt/file-preview-main/config/application.yml
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

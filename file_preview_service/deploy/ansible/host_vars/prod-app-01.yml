@@ -1,0 +1,6 @@
+# 主机（同步源）：扫描/读取属只读、恒可用，无需任何 sync 开关；不作为写目标。
+server_id: prod-app-01
+allowed_roots:
+  - /opt/apps
+  - /data/logs
+sync_write_enabled: false

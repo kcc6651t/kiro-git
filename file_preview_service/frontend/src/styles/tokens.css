@@ -1,0 +1,67 @@
+/*
+ * 设计 Token —— 全站颜色 / 间距 / 圆角 / 字体的事实来源。
+ * 组件中禁止硬编码这些字面量，一律引用 var(--fp-*)。
+ * antd 主题的唯一入口是 src/theme.ts，其取值必须与本文件的 --fp-* 变量保持一致。
+ */
+:root {
+  /* 主色与语义色（与 theme.ts 保持一致） */
+  --fp-primary: #1677ff;
+  --fp-primary-soft: rgba(22, 119, 255, 0.1);
+  --fp-success: #52c41a;
+  --fp-warning: #faad14;
+  --fp-danger: #ff4d4f;
+
+  /* 顶栏（深色渐变两端取值） */
+  --fp-header-bg: #0b1526;
+  --fp-header-bg-2: #14294e;
+  --fp-header-text: #e6edf5;
+
+  /* 背景分层 */
+  --fp-bg-app: #f0f2f5;
+  --fp-bg-panel: #ffffff;
+  --fp-bg-subtle: #fafafa;
+  --fp-bg-hover: #f5f7fa;
+  --fp-bg-active: #e6f4ff;
+
+  /* 文本 */
+  --fp-text: #1f2937;
+  --fp-text-2: #6b7280;
+  --fp-text-3: #9ca3af;
+
+  /* 边框与分隔线 */
+  --fp-border: #eaecef;
+
+  /* 圆角 */
+  --fp-radius: 8px;
+  --fp-radius-sm: 6px;
+  --fp-radius-lg: 12px;
+
+  /* 阴影（分层柔化） */
+  --fp-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --fp-shadow-2: 0 6px 24px rgba(15, 23, 42, 0.12);
+  --fp-shadow-3: 0 16px 48px rgba(15, 23, 42, 0.16);
+
+  /* 主色聚焦环 / 动效 */
+  --fp-ring: 0 0 0 3px rgba(22, 119, 255, 0.14);
+  --fp-ease: 0.15s ease;
+
+  /* 间距（8pt 体系，仅用这些档位） */
+  --fp-space-1: 4px;
+  --fp-space-2: 8px;
+  --fp-space-3: 12px;
+  --fp-space-4: 16px;
+  --fp-space-6: 24px;
+
+  /* 尺寸 */
+  --fp-header-h: 52px;
+  --fp-toolbar-h: 46px;
+  --fp-left-w: 300px;
+
+  /* 字体 */
+  --fp-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --fp-mono: 'JetBrains Mono', 'Cascadia Code', 'SFMono-Regular', Consolas,
+    'Liberation Mono', Menlo, monospace;
+  --fp-fs: 14px;
+  --fp-fs-sm: 13px;
+}

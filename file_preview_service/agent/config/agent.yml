@@ -1,0 +1,65 @@
+serverId: prod-app-01
+
+listen:
+  host: 0.0.0.0
+  port: 9443
+
+tls:
+  certFile: /opt/file-preview-agent/config/certs/agent-server.crt
+  keyFile: /opt/file-preview-agent/config/certs/agent-server.key
+  clientCaFile: /opt/file-preview-agent/config/certs/main-ca.crt
+  # Only accept client certs whose subject CN is in this list (in addition to CA validation).
+  allowedClientSubjects:
+    - CN=file-preview-main
+
+security:
+  # Only the central service IP may connect (defence-in-depth alongside the firewall).
+  allowedSourceCidrs:
+    - 10.10.0.5/32
+  allowedRoots:
+    - /opt/apps
+    - /data/logs
+  deniedPaths:
+    - /etc/shadow
+    - /etc/sudoers
+    - /root
+    - /home/*/.ssh/**
+    - /**/id_rsa
+    - /**/*.pem
+    - /**/*.key
+    - /proc
+    - /sys
+    - /dev
+  showHiddenFilesDefault: false
+  maxDirectoryEntries: 1000
+  # 预览按行读取，默认最多 5000 行；maxPreviewBytes 是字节安全阀（防超长行/大文件撑爆内存）。
+  maxPreviewBytes: 5242880
+  maxPreviewLines: 5000
+  maxTailLines: 5000
+  maxSearchResults: 200
+  # 单次搜索最多扫描的字节数（GB 级文件的保护上限）。
+  maxSearchScanBytes: 67108864
+  requestTimeoutSeconds: 10
+  # 拒绝预览硬链接数 >1 的文件（防止经硬链接别名读取敏感文件；高敏感环境可选，默认关）。
+  rejectMultiLink: false
+  # Optional second-factor token; must match filepreview.agent.api-token on the central service.
+  apiToken: ""
+
+# 主备同步
+sync:
+  # 源侧的扫描/读取属只读，无需单独开关（与 list/preview 同等安全，始终可用）。
+  # 备机（同步目标）：允许写入文件。仅需在备机上开启！这是唯一需要显式开启的开关。
+  writeEnabled: false
+  # 备机允许写入的根目录，缺省复用 security.allowedRoots。
+  targetRoots: []
+  # 单次分块传输上限
+  maxChunkBytes: 4194304
+  # 单次扫描最大文件数
+  maxFiles: 100000
+
+logging:
+  file: /opt/file-preview-agent/logs/agent.log
+  # 审计日志滚动与保留：单文件上限(MB)、保留份数、保留天数（超出自动清理）
+  maxSizeMb: 50
+  maxBackups: 10
+  maxAgeDays: 15

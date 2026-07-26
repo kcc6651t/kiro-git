@@ -1,0 +1,96 @@
+servers:
+  - id: prod-app-01
+    name: 生产应用 01
+    env: prod
+    enabled: true
+    tags:
+      - prod
+      - app
+    agent:
+      baseUrl: https://10.10.1.11:9443
+      serverName: prod-app-01-agent
+      connectTimeoutMs: 2000
+      readTimeoutMs: 10000
+      caCertRef: agent-ca
+      clientCertRef: main-client
+    defaultRoot: /opt/apps
+    allowedRoots:
+      - /opt/apps
+      - /data/logs
+    deniedPaths:
+      - /etc/shadow
+      - /root
+      - /home/*/.ssh
+      - /proc
+      - /sys
+      - /dev
+    bookmarks:
+      - name: 应用日志
+        path: /data/logs/app
+      - name: 配置目录
+        path: /opt/apps/current/config
+    # 主备同步：将本机（主）同步到备机 prod-app-02
+    backup:
+      targetServerId: prod-app-02
+      enabled: true
+      schedule: "0 */30 * * * *"        # Spring cron，每 30 分钟
+      rules:
+        - name: 应用日志与配置
+          sourceDir: /data/logs
+          targetDir: /data/logs         # 备机目标目录，缺省与 sourceDir 相同
+          includes: ["*.log", "*.conf"] # 通配符文件名白名单
+          excludes: ["*.tmp"]
+          excludeDirs: ["archive", "tmp"] # 排除目录：按目录名或相对 sourceDir 路径匹配，整棵子树跳过
+          recursive: true
+          preservePermissions: true     # 同步后备机文件权限位与主机一致
+          preserveOwnership: false      # 属主/属组保持（需备机 Agent 具备权限）
+
+  - id: prod-app-02
+    name: 生产应用 02
+    env: prod
+    enabled: true
+    tags:
+      - prod
+      - app
+    agent:
+      baseUrl: https://10.10.1.12:9443
+      serverName: prod-app-02-agent
+      caCertRef: agent-ca
+      clientCertRef: main-client
+    defaultRoot: /opt/apps
+    allowedRoots:
+      - /opt/apps
+      - /data/logs
+    deniedPaths:
+      - /etc/shadow
+      - /root
+      - /proc
+      - /sys
+      - /dev
+    bookmarks:
+      - name: 应用日志
+        path: /data/logs/app
+
+  - id: test-db-01
+    name: 测试数据库 01
+    env: test
+    enabled: true
+    tags:
+      - test
+      - db
+    agent:
+      baseUrl: https://10.10.2.21:9443
+      serverName: test-db-01-agent
+      caCertRef: agent-ca
+      clientCertRef: main-client
+    defaultRoot: /var/log
+    allowedRoots:
+      - /var/log
+    deniedPaths:
+      - /var/log/secure
+      - /proc
+      - /sys
+      - /dev
+    bookmarks:
+      - name: 系统日志
+        path: /var/log

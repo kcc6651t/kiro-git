@@ -1,0 +1,46 @@
+serverId: {{ server_id }}
+
+listen:
+  host: 0.0.0.0
+  port: {{ agent_port }}
+
+tls:
+  certFile: {{ agent_home }}/config/certs/agent-server.crt
+  keyFile: {{ agent_home }}/config/certs/agent-server.key
+  clientCaFile: {{ agent_home }}/config/certs/main-ca.crt
+  allowedClientSubjects:
+    - CN={{ central_client_cn }}
+
+security:
+  allowedSourceCidrs:
+    - {{ central_ip }}/32
+  allowedRoots:
+{% for r in allowed_roots %}
+    - {{ r }}
+{% endfor %}
+  deniedPaths:
+{% for r in denied_paths %}
+    - {{ r }}
+{% endfor %}
+  showHiddenFilesDefault: false
+  maxDirectoryEntries: 1000
+  maxPreviewBytes: {{ max_preview_bytes }}
+  maxPreviewLines: {{ max_preview_lines }}
+  maxTailLines: {{ max_tail_lines }}
+  maxSearchResults: 200
+  maxSearchScanBytes: 67108864
+  requestTimeoutSeconds: 10
+  apiToken: "{{ agent_api_token }}"
+
+# 主备同步（由 host_vars 决定开关；源侧扫描/读取恒可用，仅备机需开 writeEnabled）
+sync:
+  writeEnabled: {{ (sync_write_enabled | default(false)) | bool | ternary('true', 'false') }}
+  targetRoots:
+{% for r in sync_target_roots | default([]) %}
+    - {{ r }}
+{% endfor %}
+  maxChunkBytes: {{ sync_max_chunk_bytes }}
+  maxFiles: {{ sync_max_files }}
+
+logging:
+  file: {{ agent_home }}/logs/agent.log

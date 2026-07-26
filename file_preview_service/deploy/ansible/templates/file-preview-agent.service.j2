@@ -1,0 +1,25 @@
+[Unit]
+Description=File Preview Agent
+After=network.target
+
+[Service]
+Type=simple
+User={{ agent_user }}
+Group={{ agent_user }}
+WorkingDirectory={{ agent_home }}
+ExecStart={{ agent_home }}/file-preview-agent --config {{ agent_home }}/config/agent.yml
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+# 日志目录可写；同步为备机时，targetRoots 目录也需可写（在下方补充 ReadWritePaths）
+ReadWritePaths={{ agent_home }}/logs{% for r in (sync_target_roots | default([])) if (sync_write_enabled | default(false)) | bool %} {{ r }}{% endfor %}
+
+
+[Install]
+WantedBy=multi-user.target

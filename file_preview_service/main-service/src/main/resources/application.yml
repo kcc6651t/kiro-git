@@ -1,0 +1,87 @@
+server:
+  port: 8080
+  # In production terminate TLS here or at the reverse proxy (see deploy/nginx).
+  # ssl:
+  #   enabled: true
+  #   key-store: config/certs/main-server.p12
+  #   key-store-type: PKCS12
+  #   key-store-password: changeit
+
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/app;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    hikari:
+      maximum-pool-size: 8
+      minimum-idle: 1
+      idle-timeout: 300000
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  h2:
+    console:
+      enabled: false
+  servlet:
+    multipart:
+      enabled: false
+  # H2 连接池上限，避免连接过多占用内存
+  # (datasource.hikari 见下)
+
+filepreview:
+  # servers.yml location, resolved on the filesystem first then the classpath.
+  servers-config: config/servers.yml
+  # Which RemoteFileClient to use: 'mock' for UI development, 'agent' for real mTLS Agents.
+  remote-client: mock
+  dev:
+    cors-origin: http://localhost:5173
+  bootstrap:
+    admin-username: admin
+    admin-password: admin123
+    operator-password: operator123
+  agent:
+    default-connect-timeout-ms: 2000
+    default-read-timeout-ms: 10000
+    # Optional second-factor token sent as X-Agent-Token in addition to mTLS.
+    api-token: ""
+    client-certs:
+      main-client:
+        cert-file: config/certs/main-client.crt
+        key-file: config/certs/main-client.key
+    ca-certs:
+      agent-ca:
+        cert-file: config/certs/agent-ca.crt
+
+# SQL 工作台配置
+sql:
+  # 用于加密存储数据源密码的密钥口令，生产务必修改为高强度随机值
+  secret: "change-this-sql-secret-in-production"
+  # 单次查询默认/最大返回行数
+  default-max-rows: 1000
+  max-rows-limit: 100000
+  # JDBC 查询超时（秒）
+  query-timeout-seconds: 60
+  # 每个数据源连接池大小
+  pool-size: 5
+
+logging:
+  level:
+    root: INFO
+    com.company.filepreview: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [rid=%X{requestId}] - %msg%n"
+  file:
+    name: logs/app.log
+  # 按天+大小滚动，保留 15 天，总量上限 500MB，超出自动清理
+  logback:
+    rollingpolicy:
+      file-name-pattern: logs/app.%d{yyyy-MM-dd}.%i.log
+      max-file-size: 50MB
+      max-history: 15
+      total-size-cap: 500MB

@@ -1,0 +1,34 @@
+[Unit]
+Description=File Preview Agent
+Documentation=https://example.internal/file-preview
+After=network.target
+
+[Service]
+Type=simple
+User=filepreview
+Group=filepreview
+WorkingDirectory=/opt/file-preview-agent
+ExecStart=/opt/file-preview-agent/file-preview-agent --config /opt/file-preview-agent/config/agent.yml
+Restart=always
+RestartSec=5
+
+# 内存策略：Go 软内存上限（1.19+）+ 更积极 GC；systemd 硬上限兜底（超出触发 OOM+重启）
+Environment=GOMEMLIMIT=256MiB
+Environment=GOGC=50
+MemoryMax=384M
+
+# Hardening: the Agent is read-only and needs no elevated privileges.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+# Allow writing only to the log directory.
+ReadWritePaths=/opt/file-preview-agent/logs
+# Grant read access to the directories declared in allowedRoots, e.g.:
+# ReadOnlyPaths=/opt/apps /data/logs
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+# Shell 脚本与 Go 源码强制使用 LF，确保在 Linux 上可直接执行
+*.sh    text eol=lf
+*.go    text eol=lf
+Makefile text eol=lf
+
+# 二进制/证书不做换行转换
+*.jar   binary
+*.crt   binary
+*.key   binary
+*.pem   binary
+*.p12   binary

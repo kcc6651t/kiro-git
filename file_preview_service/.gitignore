@@ -1,0 +1,35 @@
+# Java / Maven
+main-service/target/
+*.class
+
+# Central service runtime data & logs
+main-service/data/
+main-service/logs/
+logs/
+data/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+# Built SPA (generated into the jar at build time)
+main-service/src/main/resources/static/
+
+# Go agent
+agent/dist/
+agent/go.sum
+
+# Certificates & secrets (never commit)
+*.key
+*.pem
+*.crt
+*.p12
+deploy/certs/out/
+deploy/ansible/certs/
+# 批量清单可能含真实 IP，仅提交示例
+deploy/scripts/hosts.txt
+
+# Misc
+*.log
+.DS_Store
+.idea/
+.vscode/

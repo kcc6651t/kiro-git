@@ -1,0 +1,9 @@
+# 备机（同步目标）：开启 write，并限定可写根 targetRoots；作为源被扫描/读取恒可用。
+server_id: prod-app-02
+allowed_roots:
+  - /opt/apps
+  - /data/logs
+sync_write_enabled: true
+sync_target_roots:
+  - /data/logs
+  - /opt/apps
